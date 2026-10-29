@@ -58,10 +58,6 @@ class ArbBot:
     def run_once(self):
         t0 = time.time()
         events = self.odds.fetch_events(self.cfg.sports, self.cfg.regions, self.cfg.markets)
-        try:
-            self.odds_credits = self.odds.credits()
-        except Exception:
-            pass
         for name, adapter in self.adapters.items():
             try:
                 self.balances[name] = adapter.get_balance()

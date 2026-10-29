@@ -61,6 +61,22 @@ def find_arb(events, cfg) -> List[Opportunity]:
     return sorted(opps, key=lambda o: o.roi_pct, reverse=True)
 
 
+def _normalize_outcomes(outcomes, odds=None):
+    """Return [(name, decimal_price), ...] for either API shape.
+
+    Live v4: outcomes is a list of {"name", "price"} objects.
+    Also accept the legacy parallel-lists shape used in offline fixtures:
+    outcomes=[names], odds=[prices].
+    """
+    result = []
+    if outcomes and isinstance(outcomes[0], dict):
+        for o in outcomes:
+            result.append((o.get("name"), o.get("price") or 0.0))
+    elif outcomes and odds and len(outcomes) == len(odds):
+        result = [(n, p or 0.0) for n, p in zip(outcomes, odds)]
+    return result
+
+
 def _arb_for_event(ev, cfg) -> Optional[Opportunity]:
     # best decimal odds per outcome, across bookmakers
     best = {}  # outcome -> (odds, bookie)
@@ -68,11 +84,10 @@ def _arb_for_event(ev, cfg) -> Optional[Opportunity]:
         for m in bm.get("markets", []):
             if m.get("key") != "h2h":
                 continue
-            outcomes = m.get("outcomes", [])
-            odds = m.get("odds", [])
-            if not outcomes or len(outcomes) != len(odds):
+            outcomes = _normalize_outcomes(m.get("outcomes", []), m.get("odds", []))
+            if not outcomes:
                 continue
-            for outcome, o in zip(outcomes, odds):
+            for outcome, o in outcomes:
                 if not o or o < 1.2:
                     continue
                 cur = best.get(outcome)
