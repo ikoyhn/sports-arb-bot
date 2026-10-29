@@ -1,0 +1,12 @@
+# Consistent line endings + sensible diffs for the whole repo
+* text=auto eol=lf
+
+# Treat HTML/YAML/config as text
+*.html   text eol=lf
+*.yaml   text eol=lf
+*.yml    text eol=lf
+*.toml   text eol=lf
+
+# Mark large/compiled artifacts so they don't diff as text
+*.db     -text
+*.sqlite -text

@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sports Arb Bot</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; font:15px/1.5 system-ui, sans-serif; background:#0f1420; color:#e6ebf5; }
+  header { display:flex; flex-wrap:wrap; gap:12px; align-items:center;
+           padding:16px 24px; background:#151c2c; border-bottom:1px solid #232d45; }
+  h1 { font-size:18px; margin:0; }
+  .status { display:flex; flex-wrap:wrap; gap:14px; color:#9fb0d0; font-size:13px; }
+  .badge { padding:3px 10px; border-radius:999px; font-weight:700; font-size:12px; }
+  .badge.dry { background:#3b2f0e; color:#ffd76a; }
+  .badge.live { background:#3a1013; color:#ff8f96; }
+  .err { color:#ff8f96; }
+  main { padding:24px; max-width:1100px; margin:0 auto; }
+  section { margin-bottom:32px; }
+  h2 { font-size:15px; text-transform:uppercase; letter-spacing:.08em; color:#8fa2c9; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
+  .card { background:#151c2c; border:1px solid #232d45; border-radius:12px; padding:14px; }
+  .card .top { display:flex; justify-content:space-between; gap:10px; }
+  .roi { color:#7ee2a8; font-weight:700; }
+  .muted { color:#7c8db0; font-size:13px; }
+  .card table { width:100%; border-collapse:collapse; margin:10px 0; font-size:13px; }
+  .card td { padding:4px 6px; border-bottom:1px solid #1d2740; }
+  .right { text-align:right; }
+  .foot { color:#9fb0d0; font-size:13px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; background:#151c2c;
+          border:1px solid #232d45; border-radius:12px; overflow:hidden; }
+  th { text-align:left; padding:8px 10px; background:#1a2338; color:#8fa2c9; }
+  td { padding:7px 10px; border-top:1px solid #1d2740; }
+  .st-PLACED { color:#7ee2a8; font-weight:700; }
+  .st-SKIPPED, .st-FAILED, .st-ERROR { color:#ff8f96; }
+  .st-MANUAL { color:#ffd76a; }
+</style>
+</head>
+<body>
+<header>
+  <h1>⚡ Sports Arb Bot</h1>
+  <div id="status" class="status">loading…</div>
+</header>
+<main>
+  <section>
+    <h2>Live opportunities (last poll)</h2>
+    <div id="opps" class="grid"><p class="muted">Waiting for first poll…</p></div>
+  </section>
+  <section>
+    <h2>Opportunity history</h2>
+    <div id="histOpps"><p class="muted">Loading…</p></div>
+  </section>
+  <section>
+    <h2>Bet log</h2>
+    <div id="bets"><p class="muted">Loading…</p></div>
+  </section>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const j = url => fetch(url).then(r => r.json());
+
+function rows(items, cols, statusCol) {
+  if (!items.length) return "<p class='muted'>Nothing yet.</p>";
+  const head = cols.map(c => `<th>${c}</th>`).join("");
+  const body = items.map(r => "<tr>" + cols.map(c => {
+    let v = r[c];
+    if (c === "time") v = new Date(v * 1000).toLocaleString();
+    else if (c === "roi_pct") v = "+" + v + "%";
+    else if (["stake", "total_stake", "net_profit"].includes(c)) v = "$" + Number(v).toFixed(2);
+    if (statusCol && c === statusCol) return `<td class='st-${esc(v)}'>${esc(v)}</td>`;
+    return `<td>${esc(v)}</td>`;
+  }).join("") + "</tr>").join("");
+  return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+async function refresh() {
+  try {
+    const st = await j("/api/status");
+    $("#status").innerHTML = `
+      <span class="badge ${st.dry_run ? "dry" : "live"}">${st.dry_run ? "DRY RUN" : "LIVE BETTING"}</span>
+      <span>last poll: ${esc(st.last_poll || "never")}</span>
+      <span>odds credits: ${st.odds_credits ?? "?"}</span>
+      <span>min ROI: ${st.min_roi_pct}%</span>
+      <span>adapters: ${esc((st.adapters || []).join(", ") || "none")}</span>` +
+      Object.entries(st.balances || {}).map(([b, v]) =>
+        `<span>${esc(b)} balance: ${v != null ? "$" + Number(v).toFixed(2) : "n/a"}</span>`).join("") +
+      (st.last_error ? `<span class="err">⚠ ${esc(st.last_error)}</span>` : "");
+
+    const opps = await j("/api/opportunities");
+    $("#opps").innerHTML = opps.length ? opps.map(o => `
+      <div class="card">
+        <div class="top"><b>${esc(o.event)}</b><span class="roi">+${o.roi_pct}%</span></div>
+        <div class="muted">${esc(o.sport)} · ${esc(o.commence_time)}</div>
+        <table>${o.legs.map(l => `<tr><td>${esc(l.outcome)}</td>
+          <td>${esc(l.bookie)}</td><td>@${l.odds}</td>
+          <td class="right">$${Number(l.stake).toFixed(2)}</td></tr>`).join("")}</table>
+        <div class="foot">stake $${o.total_stake} → net $${o.net_profit}</div>
+      </div>`).join("")
+      : "<p class='muted'>No opportunities above threshold right now.</p>";
+
+    const h = await j("/api/history");
+    $("#histOpps").innerHTML = rows(
+      h.opportunities.map(o => ({...o, time: o.ts})),
+      ["time", "event", "sport", "roi_pct", "total_stake", "net_profit"]);
+    $("#bets").innerHTML = rows(
+      h.bets.map(b => ({...b, time: b.ts})),
+      ["time", "event", "bookie", "outcome", "odds", "stake", "status", "message"], "status");
+  } catch (e) { console.error("refresh failed", e); }
+}
+setInterval(refresh, 15000);
+refresh();
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sports-arb-bot"
+version = "0.1.0"
+description = "Local sports-betting arbitrage bot: detects + sizes arbs, places bets via pluggable bookmaker adapters, logs to SQLite, serves a web dashboard."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "sports-arb-bot" }]
+keywords = ["sports", "arbitrage", "betting", "odds", "betfair", "playwright"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+# Core runtime dependencies. These are enough to run the bot in dry-run
+# against The Odds API and to use REST adapters (e.g. Betfair Exchange).
+dependencies = [
+  "requests>=2.31",
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.29",
+  "PyYAML>=6.0",
+]
+
+# Optional extras.
+[project.optional-dependencies]
+# Browser-automation books (DraftKings/FanDuel/BetMGM/BetRivers).
+# After installing, also run:  playwright install chromium
+browser = ["playwright>=1.44"]
+# Minimal local dev/test loop (no heavy deps — engine tests only).
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+# `arbbot` and `python -m arbbot` both start the dashboard + bot loop.
+arbbot = "arb.app:main"
+
+[project.urls]
+Homepage = "https://github.com/sports-arb-bot/sports-arb-bot"
+Documentation = "https://github.com/sports-arb-bot/sports-arb-bot#readme"
+
+[tool.setuptools]
+packages = ["arb", "arb.bookies"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]

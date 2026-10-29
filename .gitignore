@@ -1,0 +1,46 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.eggs/
+
+# --- Tooling caches ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.coverage
+htmlcov/
+
+# --- Virtualenvs ---
+.venv/
+venv/
+env/
+
+# --- Secrets & local config (NEVER commit these) ---
+config.yaml
+.env
+.env.*
+
+# --- Runtime data ---
+*.db
+*.sqlite3
+arbbot.db
+
+# --- Browser automation per-book profiles (cookies, sessions) ---
+.profiles/
+**/.profiles/
+
+# --- Logs ---
+*.log
+bot.log
+
+# --- IDE / OS ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

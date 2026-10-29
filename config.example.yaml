@@ -1,0 +1,50 @@
+# ---------------- Odds data ----------------
+# The Odds API (https://the-odds-api.com) — free tier: 500 credits/mo
+odds_api_key: "PASTE_YOUR_KEY"
+odds_api_url: "https://api.the-odds-api.com"
+sports:
+  - basketball_nba
+  - soccer_epl
+  - tennis_atp
+regions:
+  - eu
+markets:
+  - h2h
+
+# ---------------- Sizing & risk ----------------
+min_roi_pct: 0.5          # act only on net ROI (after commission) above this %
+bankroll: 1000            # total $ split across the legs of one arb
+max_stake_per_bet: 250    # hard cap per leg
+min_stake_per_bet: 2      # if any leg would be smaller than this, skip the arb
+# browser books: refuse to place if the slip price moved more than this
+# (decimal, e.g. 0.02 = two cents) vs the price the arb was sized on
+max_price_drift: 0.02
+# commission per bookie, as a fraction of winnings (betfair exchange = 5%)
+commissions:
+  betfair: 0.05
+
+# ---------------- Safety ----------------
+dry_run: true             # true = detect + log + dashboard only, NEVER place bets
+
+# ---------------- Polling ----------------
+poll_interval_sec: 60     # respect your Odds API rate limit / credit budget
+
+# ---------------- Bookmaker adapters ----------------
+# Betfair Exchange (REST API — requires exchange access)
+bookies:
+  betfair:
+    app_key: ""
+    user_name: ""
+    password: ""
+#   token: ""            # optional: pre-generated login token instead of password
+
+# Browser-automation books (no public API — session is kept in .profiles/,
+# log in ONCE with headless: false, see README)
+# Match locale/timezone to your account's state to avoid geo flags.
+  # draftkings:
+  #   headless: true
+  #   locale: "en-US"
+  #   timezone_id: "America/New_York"
+  # fanduel:    { headless: true }
+  # betmgm:     { headless: true }
+  # betrivers:  { headless: true }

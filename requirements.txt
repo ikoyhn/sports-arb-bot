@@ -1,0 +1,20 @@
+# ---------------------------------------------------------------------------
+# Core runtime deps (enough to run in dry-run / against The Odds API and
+# REST adapters like Betfair Exchange). For a proper editable install with
+# the `arbbot` command, prefer `pip install -e .` which reads pyproject.toml.
+#
+# The Playwright browser path is optional — install it only if you use the
+# browser-automation books (DraftKings/FanDuel/BetMGM/BetRivers), then run
+# `playwright install chromium`.
+# ---------------------------------------------------------------------------
+requests>=2.31
+fastapi>=0.110
+uvicorn[standard]>=0.29
+PyYAML>=6.0
+
+# --- Optional: browser-automation books (uncomment if you use them) --------
+# playwright>=1.44
+# (after that: playwright install chromium)
+
+# --- Optional: local test loop ---------------------------------------------
+# pytest>=7.0
