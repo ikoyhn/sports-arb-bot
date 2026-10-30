@@ -31,6 +31,10 @@ class BookieAdapter(ABC):
     def get_balance(self) -> float:
         """Available bettable balance in account currency."""
 
+    def supports(self, leg) -> bool:
+        """Can this adapter place this leg (market type, ids it needs)?"""
+        return True
+
     @abstractmethod
     def place_bet(self, opportunity, leg, stake: float) -> BetResult:
         """Place one arb leg.

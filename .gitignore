@@ -25,6 +25,8 @@ env/
 config.yaml
 .env
 .env.*
+*.pem
+*.key
 
 # --- Runtime data ---
 *.db

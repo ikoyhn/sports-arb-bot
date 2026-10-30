@@ -30,7 +30,7 @@ def _event(bookmakers, sport="basketball_nba", home="A", away="B", event_id="ev"
         "sport_key": sport,
         "home_team": home,
         "away_team": away,
-        "commence_time": "2026-01-01T00:00:00Z",
+        "commence_time": "2099-01-01T00:00:00Z",
         "bookmakers": [
             {"key": key, "markets": [
                 {"key": "h2h", "outcomes": list(odds), "odds": list(odds.values())}
@@ -116,3 +116,33 @@ def test_below_min_roi_is_dropped():
     ev = _event([("dkt", {"A": 2.10}), ("fanduel", {"B": 2.10})])
     assert find_arb([ev], _cfg(min_roi_pct=0.5))           # kept
     assert find_arb([ev], _cfg(min_roi_pct=10.0)) == []    # dropped
+
+
+# --- regressions from live data ------------------------------------------
+def test_incomplete_three_way_market_is_not_an_arb():
+    # Arsenal (1.10) must count: without it Hull + Draw looked like +487%.
+    ev = _event([("book1", {"Arsenal": 1.10, "Hull": 19.5, "Draw": 8.4}),
+                 ("book2", {"Arsenal": 1.08, "Draw": 8.0})], sport="soccer_epl")
+    assert find_arb([ev], _cfg()) == []
+
+
+def test_capped_arb_still_pays_equally_on_every_leg():
+    ev = _event([("dkt", {"A": 12.0}), ("fanduel", {"B": 1.3})])
+    (opp,) = find_arb([ev], _cfg(bankroll=1000.0, max_stake_per_bet=250.0))
+    payouts = [l.stake * l.odds for l in opp.legs]
+    assert max(l.stake for l in opp.legs) <= 250.0
+    assert max(payouts) - min(payouts) < 0.1
+
+
+def test_books_you_dont_have_are_ignored():
+    ev = _event([("onexbet", {"A": 2.5}), ("draftkings", {"A": 1.9, "B": 2.1}),
+                 ("fanduel", {"A": 2.05, "B": 1.8})])
+    assert find_arb([ev], _cfg())                                   # 1xBet arb
+    (opp,) = find_arb([ev], _cfg(bookmakers=["draftkings", "fanduel"]))
+    assert {l.bookie for l in opp.legs} == {"draftkings", "fanduel"}
+
+
+def test_started_events_are_skipped():
+    ev = _event([("dkt", {"A": 2.10}), ("fanduel", {"B": 2.10})])
+    ev["commence_time"] = "2020-01-01T00:00:00Z"
+    assert find_arb([ev], _cfg()) == []

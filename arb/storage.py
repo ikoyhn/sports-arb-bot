@@ -39,7 +39,7 @@ class Storage:
             self.db.execute(
                 "INSERT INTO bets (ts,event_id,event,bookie,outcome,odds,stake,"
                 "status,ref,message) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (time.time(), opp.event_id, opp.event, leg.bookie, leg.outcome,
+                (time.time(), opp.event_id, opp.event, leg.bookie, leg.label,
                  leg.odds, leg.stake, status, ref, message))
             self.db.commit()
 

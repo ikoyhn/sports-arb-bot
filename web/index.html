@@ -33,7 +33,7 @@
   td { padding:7px 10px; border-top:1px solid #1d2740; }
   .st-PLACED { color:#7ee2a8; font-weight:700; }
   .st-SKIPPED, .st-FAILED, .st-ERROR { color:#ff8f96; }
-  .st-MANUAL { color:#ffd76a; }
+  .st-MANUAL, .st-REJECTED { color:#ffd76a; }
 </style>
 </head>
 <body>
@@ -42,6 +42,10 @@
   <div id="status" class="status">loading…</div>
 </header>
 <main>
+  <section id="pendingSec" hidden>
+    <h2>⏳ Awaiting your approval</h2>
+    <div id="pending" class="grid"></div>
+  </section>
   <section>
     <h2>Live opportunities (last poll)</h2>
     <div id="opps" class="grid"><p class="muted">Waiting for first poll…</p></div>
@@ -75,6 +79,35 @@ function rows(items, cols, statusCol) {
   return `<table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
 }
 
+async function decide(id, decision) {
+  const r = await fetch(`/api/pending/${id}/${decision}`, {method: "POST"});
+  if (!r.ok) alert((await r.json()).detail || "failed");
+  refreshPending();
+}
+
+async function refreshPending() {
+  try {
+    const p = await j("/api/pending");
+    $("#pendingSec").hidden = !p.length;
+    const now = Date.now() / 1000;
+    $("#pending").innerHTML = p.map(t => `
+      <div class="card">
+        <div class="top"><b>${esc(t.summary.event)}</b><span class="roi">+${t.summary.roi_pct}%</span></div>
+        <div class="muted">${esc(t.summary.market)} · starts ${esc(t.summary.commence)} · net $${t.summary.net_profit}
+          · expires in ${Math.max(0, Math.round(t.expires - now))}s</div>
+        <table>${t.summary.legs.map(l => `<tr><td>${esc(l.outcome)}</td><td>${esc(l.bookie)}</td>
+          <td>priced @${l.priced}</td><td>slip @${l.slip_price ?? "?"}</td>
+          <td class="right">$${Number(l.stake).toFixed(2)}</td></tr>`).join("")}</table>
+        <div class="foot">
+          <button onclick="decide(${t.id}, 'approve')">Approve &amp; place</button>
+          <button onclick="decide(${t.id}, 'reject')">Reject</button>
+        </div>
+      </div>`).join("");
+  } catch (e) { console.error("pending refresh failed", e); }
+}
+setInterval(refreshPending, 2000);
+refreshPending();
+
 async function refresh() {
   try {
     const st = await j("/api/status");
@@ -82,7 +115,10 @@ async function refresh() {
       <span class="badge ${st.dry_run ? "dry" : "live"}">${st.dry_run ? "DRY RUN" : "LIVE BETTING"}</span>
       <span>last poll: ${esc(st.last_poll || "never")}</span>
       <span>odds credits: ${st.odds_credits ?? "?"}</span>
+      <span>scanning: ${Object.values(st.planner?.schedule || {}).filter(v => v).length}/${(st.planner?.sports || []).length} sports
+        (${st.planner?.cost_per_sport ?? "?"} credits each)</span>
       <span>min ROI: ${st.min_roi_pct}%</span>
+      <span>mode: ${esc(st.execution_mode)}</span>
       <span>adapters: ${esc((st.adapters || []).join(", ") || "none")}</span>` +
       Object.entries(st.balances || {}).map(([b, v]) =>
         `<span>${esc(b)} balance: ${v != null ? "$" + Number(v).toFixed(2) : "n/a"}</span>`).join("") +
@@ -92,7 +128,7 @@ async function refresh() {
     $("#opps").innerHTML = opps.length ? opps.map(o => `
       <div class="card">
         <div class="top"><b>${esc(o.event)}</b><span class="roi">+${o.roi_pct}%</span></div>
-        <div class="muted">${esc(o.sport)} · ${esc(o.commence_time)}</div>
+        <div class="muted">${esc(o.sport)} · ${esc(o.market)} · ${esc(o.commence_time)}</div>
         <table>${o.legs.map(l => `<tr><td>${esc(l.outcome)}</td>
           <td>${esc(l.bookie)}</td><td>@${l.odds}</td>
           <td class="right">$${Number(l.stake).toFixed(2)}</td></tr>`).join("")}</table>

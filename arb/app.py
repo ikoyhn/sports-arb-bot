@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
 from .bot import ArbBot
@@ -62,11 +62,25 @@ def create_app(cfg: Config, storage: Storage, bot: ArbBot,
             "poll_interval_sec": cfg.poll_interval_sec,
             "min_roi_pct": cfg.min_roi_pct,
             "bankroll": cfg.bankroll,
+            "execution_mode": cfg.execution_mode,
+            "planner": bot.planner.status(),
         }
+
+    @app.get("/api/pending")
+    def pending():
+        return bot.approvals.list()
+
+    @app.post("/api/pending/{ticket_id}/{decision}")
+    def decide(ticket_id: int, decision: str):
+        if decision not in ("approve", "reject"):
+            raise HTTPException(400, "decision must be approve or reject")
+        if not bot.approvals.decide(ticket_id, decision == "approve"):
+            raise HTTPException(404, "no such pending ticket (expired or already decided)")
+        return {"ok": True}
 
     @app.get("/api/opportunities")
     def opportunities():
-        return bot.latest
+        return [o.to_dict() for o in bot.latest]
 
     @app.get("/api/history")
     def history():

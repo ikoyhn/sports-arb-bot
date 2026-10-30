@@ -31,9 +31,12 @@ dependencies = [
 
 # Optional extras.
 [project.optional-dependencies]
-# Browser-automation books (DraftKings/FanDuel/BetMGM/BetRivers).
+# Browser-automation books (DraftKings, FanDuel, BetMGM, Caesars, ...) + the
+# Claude agent that navigates them (needs ANTHROPIC_API_KEY or `ant auth login`).
 # After installing, also run:  playwright install chromium
-browser = ["playwright>=1.44"]
+browser = ["playwright>=1.44", "anthropic>=2.0"]
+# Exchange adapters with trading APIs (Kalshi, Polymarket US) — request signing.
+exchanges = ["cryptography>=42"]
 # Minimal local dev/test loop (no heavy deps — engine tests only).
 dev = ["pytest>=7.0"]
 

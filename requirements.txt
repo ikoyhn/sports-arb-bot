@@ -4,7 +4,7 @@
 # the `arbbot` command, prefer `pip install -e .` which reads pyproject.toml.
 #
 # The Playwright browser path is optional — install it only if you use the
-# browser-automation books (DraftKings/FanDuel/BetMGM/BetRivers), then run
+# browser-automation books (DraftKings, FanDuel, BetMGM, Caesars, ...), then run
 # `playwright install chromium`.
 # ---------------------------------------------------------------------------
 requests>=2.31
@@ -14,6 +14,7 @@ PyYAML>=6.0
 
 # --- Optional: browser-automation books (uncomment if you use them) --------
 # playwright>=1.44
+# anthropic>=2.0       # Claude agent that navigates the browser books
 # (after that: playwright install chromium)
 
 # --- Optional: local test loop ---------------------------------------------

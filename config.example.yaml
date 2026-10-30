@@ -2,49 +2,118 @@
 # The Odds API (https://the-odds-api.com) — free tier: 500 credits/mo
 odds_api_key: "PASTE_YOUR_KEY"
 odds_api_url: "https://api.the-odds-api.com"
+
+# Sport keys, or wildcards resolved each hour against what's in season
+# (free call). Sports with no game in `polling.lookahead_hours` cost nothing.
 sports:
+  - americanfootball_nfl
+  - americanfootball_ncaaf
   - basketball_nba
+  - basketball_ncaab
+  - icehockey_nhl
+  - mma_mixed_martial_arts
+  - boxing_boxing
   - soccer_epl
-  - tennis_atp
-regions:
-  - eu
+  - soccer_uefa_champs_league
+  - soccer_usa_mls
+  - tennis_*              # every live ATP/WTA tournament
+
+# Only these books are scanned and used for arbs (Odds API keys). Leave empty
+# to use the books under `bookies:`. COST: every 10 books = 1 credit per
+# market per sport poll — 10 books is the sweet spot.
+bookmakers:
+  - draftkings
+  - fanduel
+  - betmgm
+  - espnbet               # theScore Bet (formerly ESPN Bet)
+  - betrivers
+  - hardrockbet
+  - ballybet
+  - betparx
+  - kalshi                # exchange (API adapter)
+  - polymarket_us         # exchange (API adapter)
+  # - williamhill_us      # Caesars — paid Odds API plans only
+  # - fanatics            # paid Odds API plans only
+regions:                  # ignored while `bookmakers` is set
+  - us
+  - us2
+  - us_ex
+# h2h = moneyline; spreads/totals pair only identical lines. Each market
+# costs 1 credit per sport poll (× book groups above).
 markets:
   - h2h
+  - spreads
+  - totals
 
 # ---------------- Sizing & risk ----------------
-min_roi_pct: 0.5          # act only on net ROI (after commission) above this %
+min_roi_pct: 0.5          # act only on net ROI (after fees/commission) above this %
 bankroll: 1000            # total $ split across the legs of one arb
 max_stake_per_bet: 250    # hard cap per leg
 min_stake_per_bet: 2      # if any leg would be smaller than this, skip the arb
-# browser books: refuse to place if the slip price moved more than this
-# (decimal, e.g. 0.02 = two cents) vs the price the arb was sized on
+# refuse to place if the price moved more than this (decimal, 0.02 = two
+# cents) vs the price the arb was sized on — browser slips and exchange limits
 max_price_drift: 0.02
-# commission per bookie, as a fraction of winnings (betfair exchange = 5%)
-commissions:
-  betfair: 0.05
+# commission per bookie, as a fraction of winnings
+commissions: {}
+# exchange fee per contract = k * p * (1 - p) for a contract costing p
+exchange_fees:
+  kalshi: 0.07
+  polymarket_us: 0.0695
 
 # ---------------- Safety ----------------
 dry_run: true             # true = detect + log + dashboard only, NEVER place bets
+# once dry_run is false:
+#   approve = AI fills every browser slip, then you click Approve on the dashboard
+#   auto    = commit as soon as the code-level checks pass (no human)
+execution_mode: approve
+approval_timeout_sec: 45  # unanswered approvals are rejected
 
-# ---------------- Polling ----------------
-poll_interval_sec: 60     # respect your Odds API rate limit / credit budget
+# ---------------- AI navigator (browser books) ----------------
+# Needs ANTHROPIC_API_KEY in the environment (or `ant auth login`).
+ai:
+  model: claude-opus-5-5
+  effort: low             # low keeps it fast; raise if it misnavigates
+  max_steps: 30           # tool calls per slip before giving up
+  timeout_sec: 150
+  vision: true            # let the agent take screenshots
+
+# ---------------- Polling (credit-aware) ----------------
+poll_interval_sec: 30     # scheduler tick; per-sport cadence is below
+polling:
+  fast_sec: 60            # next game within near_hours
+  near_hours: 1
+  mid_sec: 300            # next game within mid_hours
+  mid_hours: 6
+  slow_sec: 1800          # next game within lookahead_hours
+  lookahead_hours: 24     # sports with nothing sooner aren't polled
+  credits_reset_day: 1    # day of month your Odds API quota resets
+  credit_reserve: 10      # never spend the last N credits
 
 # ---------------- Bookmaker adapters ----------------
-# Betfair Exchange (REST API — requires exchange access)
 bookies:
-  betfair:
-    app_key: ""
-    user_name: ""
-    password: ""
-#   token: ""            # optional: pre-generated login token instead of password
+  # Exchanges — official trading APIs, no browser (pip install -e .[exchanges])
+  # kalshi:
+  #   key_id: ""
+  #   private_key_path: "kalshi.pem"   # keep outside git (*.pem is ignored)
+  #   demo: false
+  # polymarket_us:
+  #   key_id: ""
+  #   secret_key: ""
 
-# Browser-automation books (no public API — session is kept in .profiles/,
-# log in ONCE with headless: false, see README)
-# Match locale/timezone to your account's state to avoid geo flags.
-  # draftkings:
-  #   headless: true
-  #   locale: "en-US"
-  #   timezone_id: "America/New_York"
-  # fanduel:    { headless: true }
-  # betmgm:     { headless: true }
-  # betrivers:  { headless: true }
+  # Browser books (session kept in .profiles/<book>/; log in ONCE yourself
+  # with headless: false, see README). Any book can override home_url /
+  # allowed_domains / place_bet_text.
+  # draftkings:     { headless: true, timezone_id: "America/New_York" }
+  # fanduel:        { headless: true }
+  # betmgm:         { headless: true }       # uses `state`
+  # williamhill_us: { headless: true }       # Caesars; uses `state`
+  # espnbet:        { headless: true }       # theScore Bet (formerly ESPN Bet)
+  # fanatics:       { headless: true }
+  # betrivers:      { headless: true }       # uses `state`
+  # hardrockbet:    { headless: true }
+  # ballybet:       { headless: true }
+  # betparx:        { headless: true }       # uses `state`
+  # bet365:         { headless: true }       # uses `state`; not in Odds API US feed
+
+# two-letter state for books with state-specific sites (BetMGM, Caesars, ...)
+state: nj
